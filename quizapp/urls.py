@@ -12,4 +12,5 @@ urlpatterns = [
     path('leaderboard/', views.leaderboard, name='leaderboard'),
     path('fraud/', views.fraud, name='fraud'),
     path('report_fraud/', views.report_fraud, name='report_fraud'),
+    path('exam_completed/',views.exam_completed,name='examcompleted'),
 ]

@@ -28,7 +28,7 @@
                 {% if questions %}
                     {% for question in questions %}
                         <div class="card shadow-sm p-3 mb-4">
-                            <h5>{{ question.qno }}. {{ question.question }}</h5>
+                            <h5>{{ question.qno }}. {{ question.formatted_question|safe }}</h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="question_{{ question.qno }}" value="{{ question.o1 }}">
                                 <label class="form-check-label">{{ question.o1 }}</label>
