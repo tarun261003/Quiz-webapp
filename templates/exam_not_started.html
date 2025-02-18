@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Exam Not Started{% endblock title %}
+
+{% block body %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    * {
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: url('{% static "wmremove-transformed.jpeg" %}') no-repeat center center/cover;
+    }
+
+    .container {
+        width: 600px;
+        backdrop-filter: blur(2px);
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    h2 {
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3);
+        margin-bottom: 20px;
+    }
+
+    p {
+        color: #fff;
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #4CAF50, #2E8B57);
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 5px 15px rgba(76, 175, 80, 0.4);
+    }
+</style>
+
+<div class="container">
+    <h2>Exam Not Started</h2>
+    <p>The exam has not started yet. Please wait for the administrator to begin the exam.</p>
+    <p>Here are some instructions to prepare:</p>
+    <ul style="text-align: left; color: white; margin-bottom: 20px;">
+        <li>Ensure you have a stable internet connection.</li>
+        <li>Use a laptop or desktop for the best experience.</li>
+        <li>Do not refresh the page during the exam.</li>
+        <li>Read all questions carefully before answering.</li>
+    </ul>
+    <button class="btn" onclick="window.location.href='/'">Return to Home</button>
+</div>
+{% endblock body %}

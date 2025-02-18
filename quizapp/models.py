@@ -1,6 +1,11 @@
 from django.db import models
 
 # Create your models here.
+class ExamControl(models.Model):
+    exam_started = models.BooleanField(default=False)
+
+    def __str__(self):
+        return "Exam Started" if self.exam_started else "Exam Not Started"
 class question(models.Model):
     qno=models.IntegerField()
     question=models.CharField(max_length=100)

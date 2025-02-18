@@ -68,12 +68,18 @@ def user_logout(request):
     return redirect('home')
 
 
+from .models import ExamControl
+
 @login_required
 def home(request):
-    """Renders quiz questions and handles exam submissions."""
     user = request.user
 
-    # Check if the user has already completed the quiz
+    # Check if the exam is started
+    exam_control = ExamControl.objects.first()
+    if not exam_control or not exam_control.exam_started:
+        return render(request, 'exam_not_started.html')  # Render the new HTML page
+
+    # Check if the user has already completed the exam
     if models.leaderboard.objects.filter(username=user.username).exists():
         return HttpResponse("Your exam is completed.")
 
@@ -81,21 +87,36 @@ def home(request):
     questions = list(models.question.objects.all())
     random.shuffle(questions)
 
-    # Handle quiz submission
     if request.method == 'POST':
         score = 0
         for i, question in enumerate(questions, start=1):
             selected_option = request.POST.get(f'question_{i}')
-            correct_option = question.co  # Assuming 'co' is the correct answer field
+            correct_option = question.co
 
             if selected_option and selected_option == correct_option:
                 score += 1
 
-        # Save user score in the leaderboard
         models.leaderboard.objects.create(username=user.username, score=score)
         return HttpResponse("Your exam is completed.")
 
     return render(request, 'home.html', {'questions': questions})
+from django.http import JsonResponse
+import json
+
+@login_required
+def report_fraud(request):
+    """API to flag users who switch tabs during the exam."""
+    if request.method == "POST":
+        uname = request.user.username
+        
+        # Flag user as fraud in the database
+        if not models.fraud_model.objects.filter(username=uname).exists():
+            models.fraud_model.objects.create(username=uname, fraud=True)
+            logout(request)  # Force logout
+
+        return JsonResponse({"status": "fraud_detected"})
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 @login_required
@@ -106,15 +127,12 @@ def leaderboard(request):
 
 
 def fraud(request):
-    """Handles fraud detection and prevents users from reattempting the quiz."""
+    """Renders the fraud detection page and logs out the user."""
     uname = request.user.username
 
-    # If user is already flagged as fraud, show fraud page
-    if models.fraud_model.objects.filter(username=uname).exists():
-        return render(request, 'fraud.html')
-
-    if uname:
+    if uname and not models.fraud_model.objects.filter(username=uname).exists():
         models.fraud_model.objects.create(username=uname, fraud=True)
         logout(request)  # Force logout
 
     return render(request, 'fraud.html')
+
