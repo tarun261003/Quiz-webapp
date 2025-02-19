@@ -12,7 +12,7 @@
 <body>
     <nav class="navbar navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="#">Technical Quiz</a>
+            <a class="navbar-brand" href="#" style="color:coral;">Technical Quiz</a>
             <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
         </div>
     </nav>
@@ -56,15 +56,20 @@
     </div>
 
     <script>
-        let tabSwitchCount = 0; // Track tab switches
-        const maxTabSwitches = 2; // Allow 2 switches before logging out
-        let fraudReported = false; // Track if fraud was reported already
+        let tabSwitchCount = 0; 
+        const maxTabSwitches = 2;
+        let fraudReported = false; 
+        let examCompleted = false; 
     
-        // Detect tab switching
+        document.getElementById("quiz-form").addEventListener("submit", function () {
+            examCompleted = true;
+            document.cookie = "time_left=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; // Clear timer cookie on submit
+        });
+    
         document.addEventListener("visibilitychange", function () {
+            if (examCompleted) return;
             if (document.hidden) {
                 tabSwitchCount += 1;
-    
                 if (tabSwitchCount === 1) {
                     alert("Warning: You switched tabs! One more violation will log you out.");
                 } else if (tabSwitchCount >= maxTabSwitches) {
@@ -73,19 +78,19 @@
             }
         });
     
-        // Detect window resizing
         let resizeTimeout;
         window.addEventListener("resize", function () {
+            if (examCompleted) return;
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(function () {
                 if (!fraudReported) {
                     reportFraud("Window resize detected! You will be logged out.");
                 }
-            }, 500); // Debounce to prevent multiple rapid triggers
+            }, 500);
         });
     
-        // Function to send fraud report and redirect user
         function reportFraud(message) {
+            if (examCompleted) return;
             fraudReported = true;
             alert(message);
             fetch("{% url 'report_fraud' %}", {
@@ -102,26 +107,57 @@
             });
         }
     
+        function setCookie(name, value, minutes) {
+            let expires = "";
+            if (minutes) {
+                let date = new Date();
+                date.setTime(date.getTime() + (minutes * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + value + "; path=/" + expires;
+        }
+    
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) === 0) return cookie.substring(nameEQ.length);
+            }
+            return null;
+        }
+    
         function startTimer(duration, display) {
-            var timer = duration, minutes, seconds;
-            setInterval(function () {
-                minutes = parseInt(timer / 60, 10);
-                seconds = parseInt(timer % 60, 10);
+            let timer = getCookie("time_left") ? parseInt(getCookie("time_left")) : duration;
+            let interval = setInterval(function () {
+                if (examCompleted) {
+                    clearInterval(interval);
+                    return;
+                }
+    
+                let minutes = parseInt(timer / 60, 10);
+                let seconds = parseInt(timer % 60, 10);
                 minutes = minutes < 10 ? "0" + minutes : minutes;
                 seconds = seconds < 10 ? "0" + seconds : seconds;
                 display.textContent = "Time Left: " + minutes + ":" + seconds;
+    
+                setCookie("time_left", timer, 10);
+    
                 if (--timer < 0) {
+                    document.cookie = "time_left=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     document.getElementById('quiz-form').submit();
                 }
             }, 1000);
         }
     
         window.onload = function () {
-            var timeLimit = 10 * 60, // 10 minutes
-                display = document.getElementById('timer');
+            let timeLimit = 10 * 60;
+            let display = document.getElementById('timer');
             startTimer(timeLimit, display);
         };
     </script>
+    
+    
     
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

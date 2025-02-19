@@ -75,7 +75,7 @@ def home(request):
         return render(request, 'exam_not_started.html')
 
     if models.leaderboard.objects.filter(username=user.username).exists():
-        return redirect('exam_completed/')  # Redirects to the animated page
+        return redirect('examcompleted')  # Redirects to the animated page
 
     questions = list(models.Question.objects.all())
     random.shuffle(questions)
@@ -85,7 +85,7 @@ def home(request):
                     if request.POST.get(f'question_{i}') == question.co)
 
         models.leaderboard.objects.create(username=user.username, score=score)
-        return redirect('exam_completed/')  # Redirect after completion
+        return redirect('examcompleted')  # Redirect after completion
 
     return render(request, 'home.html', {'questions': questions})
 
