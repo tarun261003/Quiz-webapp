@@ -5,7 +5,7 @@
 
 {% block body %}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
     * {
         font-family: 'Poppins', sans-serif;
@@ -19,18 +19,41 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        background: url('{% static "wmremove-transformed.jpeg" %}') no-repeat center center/cover;
+        background: url('https://raw.githubusercontent.com/tarun261003/Quiz-webapp/refs/heads/main/static/wmremove-transformed.jpeg') no-repeat center center/cover;
+        overflow: hidden;
     }
 
     .container {
         width: 600px;
-        backdrop-filter: blur(2px);
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
         padding: 40px;
-        box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.3);
+        box-shadow: 0px 12px 30px rgba(0, 0, 0, 0.4);
         text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        animation: fadeIn 1s ease-in-out, float 3s ease-in-out infinite;
+        position: relative;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
     }
 
     h2 {
@@ -38,29 +61,145 @@
         color: #fff;
         text-shadow: 0px 2px 10px rgba(0, 0, 0, 0.3);
         margin-bottom: 20px;
+        font-size: 2rem;
+        opacity: 0;
+        animation: textFadeIn 0.5s ease-in-out forwards;
+        animation-delay: 0.5s;
     }
 
     p {
         color: #fff;
-        font-size: 16px;
+        font-size: 1rem;
         margin-bottom: 20px;
+        line-height: 1.6;
+        opacity: 0;
+        animation: textFadeIn 0.5s ease-in-out forwards;
+        animation-delay: 1s;
+    }
+
+    ul {
+        list-style-type: none;
+        padding: 0;
+        margin-bottom: 20px;
+        opacity: 0;
+        animation: textFadeIn 0.5s ease-in-out forwards;
+        animation-delay: 1.5s;
+    }
+
+    ul li {
+        color: #fff;
+        font-size: 1rem;
+        margin-bottom: 10px;
+        padding-left: 20px;
+        position: relative;
+    }
+
+    ul li::before {
+        content: "•";
+        color: #4CAF50;
+        font-size: 1.5rem;
+        position: absolute;
+        left: 0;
+        top: -5px;
+        animation: bulletPulse 1.5s infinite;
+    }
+
+    @keyframes bulletPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.2);
+        }
     }
 
     .btn {
-        padding: 10px 20px;
+        padding: 12px 24px;
         border: none;
         border-radius: 8px;
         background: linear-gradient(135deg, #4CAF50, #2E8B57);
         color: white;
-        font-size: 16px;
+        font-size: 1rem;
         font-weight: bold;
         cursor: pointer;
-        transition: 0.3s;
+        transition: all 0.3s ease;
+        box-shadow: 0px 4px 15px rgba(76, 175, 80, 0.3);
+        opacity: 0;
+        animation: textFadeIn 0.5s ease-in-out forwards;
+        animation-delay: 2s;
     }
 
-    .btn:hover {
+    /* .btn:hover {
         transform: scale(1.05);
-        box-shadow: 0px 5px 15px rgba(76, 175, 80, 0.4);
+        animation: glow 1.5s infinite alternate;
+    } */
+
+    @keyframes glow {
+        0% {
+            box-shadow: 0px 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        100% {
+            box-shadow: 0px 4px 20px rgba(76, 175, 80, 0.8);
+        }
+    }
+
+    @keyframes textFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Notice Pad Design */
+    .container::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        right: -10px;
+        bottom: -10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 30px;
+        z-index: -1;
+        box-shadow: 0px 15px 35px rgba(0, 0, 0, 0.5);
+    }
+
+    .container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        border-radius: 20px;
+        z-index: -1;
+        animation: animateBackground 10s infinite alternate, gradientAnimation 5s infinite;
+    }
+
+    @keyframes animateBackground {
+        0% {
+            transform: translateY(0);
+        }
+        100% {
+            transform: translateY(-50px);
+        }
+    }
+
+    @keyframes gradientAnimation {
+        0% {
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        }
+        50% {
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1));
+        }
+        100% {
+            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        }
     }
 </style>
 
@@ -68,7 +207,7 @@
     <h2>Exam Not Started</h2>
     <p>The exam has not started yet. Please wait for the administrator to begin the exam.</p>
     <p>Here are some instructions to prepare:</p>
-    <ul style="text-align: left; color: white; margin-bottom: 20px;">
+    <ul>
         <li>Ensure you have a stable internet connection.</li>
         <li>Use a laptop or desktop for the best experience.</li>
         <li>Do not refresh the page during the exam.</li>

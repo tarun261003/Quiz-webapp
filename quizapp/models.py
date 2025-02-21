@@ -8,6 +8,14 @@ class ExamControl(models.Model):
         return "Exam Started" if self.exam_started else "Exam Not Started"
 from django.db import models
 import markdown
+from django.db import models
+from django.contrib.auth.models import User
+import time
+
+class UserQuizProgress(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    quiz_start_time = models.IntegerField(null=True, blank=True)  # Store timestamp
+    quiz_duration = models.IntegerField(default=20 * 60)  # Default 20 minutes
 
 class Question(models.Model):
     qno = models.IntegerField()

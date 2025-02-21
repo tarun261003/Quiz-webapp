@@ -8,6 +8,25 @@
     <title>Technical Quiz</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        #fixed-timer {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        body {
+            padding-top: 60px; /* Prevents content from being hidden behind fixed timer */
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-dark bg-primary">
@@ -22,13 +41,13 @@
         <p class="text-center text-muted">Answer all questions carefully.</p>
         
         <div class="card p-4">
-            <p class="text-center" id="timer" style="font-size: 1.2rem; font-weight: bold;"></p>
+            <div id="fixed-timer">Time Left: <span id="timer">00:00</span></div>
             <form method="post" id="quiz-form">
                 {% csrf_token %}
                 {% if questions %}
                     {% for question in questions %}
                         <div class="card shadow-sm p-3 mb-4">
-                            <h5>{{ question.qno }}. {{ question.formatted_question|safe }}</h5>
+                            <h5>{{ question.qno }}. <pre>{{ question.formatted_question|safe }}</pre></h5>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="question_{{ question.qno }}" value="{{ question.o1 }}">
                                 <label class="form-check-label">{{ question.o1 }}</label>
@@ -58,16 +77,20 @@
     <script>
         let tabSwitchCount = 0; 
         const maxTabSwitches = 2;
+        let fraudCheckEnabled = false;   
         let fraudReported = false; 
-        let examCompleted = false; 
+        let examCompleted = false;
+        let disableWarnings = false; 
+        let fullscreenGraceTimer = null;  // Timer for grace period after entering fullscreen
     
         document.getElementById("quiz-form").addEventListener("submit", function () {
             examCompleted = true;
-            document.cookie = "time_left=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; // Clear timer cookie on submit
+            disableWarnings = true;
+            document.cookie = "time_left=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         });
     
         document.addEventListener("visibilitychange", function () {
-            if (examCompleted) return;
+            if (!fraudCheckEnabled || examCompleted || disableWarnings) return;
             if (document.hidden) {
                 tabSwitchCount += 1;
                 if (tabSwitchCount === 1) {
@@ -80,7 +103,7 @@
     
         let resizeTimeout;
         window.addEventListener("resize", function () {
-            if (examCompleted) return;
+            if (!fraudCheckEnabled || examCompleted || disableWarnings) return;
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(function () {
                 if (!fraudReported) {
@@ -107,58 +130,93 @@
             });
         }
     
-        function setCookie(name, value, minutes) {
-            let expires = "";
-            if (minutes) {
-                let date = new Date();
-                date.setTime(date.getTime() + (minutes * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + value + "; path=/" + expires;
-        }
-    
-        function getCookie(name) {
-            let nameEQ = name + "=";
-            let cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                let cookie = cookies[i].trim();
-                if (cookie.indexOf(nameEQ) === 0) return cookie.substring(nameEQ.length);
-            }
-            return null;
-        }
-    
         function startTimer(duration, display) {
-            let timer = getCookie("time_left") ? parseInt(getCookie("time_left")) : duration;
+            let timer = parseInt("{{ remaining_time }}") || duration; 
             let interval = setInterval(function () {
                 if (examCompleted) {
                     clearInterval(interval);
                     return;
                 }
-    
-                let minutes = parseInt(timer / 60, 10);
-                let seconds = parseInt(timer % 60, 10);
-                minutes = minutes < 10 ? "0" + minutes : minutes;
-                seconds = seconds < 10 ? "0" + seconds : seconds;
-                display.textContent = "Time Left: " + minutes + ":" + seconds;
-    
-                setCookie("time_left", timer, 10);
+                let minutes = Math.floor(timer / 60);
+                let seconds = timer % 60;
+                display.textContent = (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     
                 if (--timer < 0) {
-                    document.cookie = "time_left=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     document.getElementById('quiz-form').submit();
+                    clearInterval(interval);
                 }
             }, 1000);
         }
     
+        // Request fullscreen on click (promise-based to detect success)
+        async function enterFullScreen() {
+            let elem = document.documentElement;
+            try {
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
+                }
+                // If we reach here, fullscreen request succeeded
+                // Start a short grace period to avoid false fraud triggers
+                fullscreenGraceTimer = setTimeout(() => {
+                    fraudCheckEnabled = true;
+                }, 2000); // 2 seconds grace
+            } catch (err) {
+                console.log("Fullscreen request was blocked or failed:", err);
+                // Do NOT enable fraud checks if it fails
+            }
+        }
+    
+        // Detect exit from fullscreen
+        function detectExitFullScreen() {
+            document.addEventListener("fullscreenchange", function () {
+                handleFullScreenExit();
+            });
+            document.addEventListener("mozfullscreenchange", function () {
+                handleFullScreenExit();
+            });
+            document.addEventListener("webkitfullscreenchange", function () {
+                handleFullScreenExit();
+            });
+            document.addEventListener("msfullscreenchange", function () {
+                handleFullScreenExit();
+            });
+        }
+    
+        function handleFullScreenExit() {
+            // If user is no longer in fullscreen and fraud checks are enabled (outside grace period)
+            if (!document.fullscreenElement && fraudCheckEnabled && !disableWarnings) {
+                reportFraud("You exited full-screen mode! You are being logged out.");
+            } else if (!document.fullscreenElement) {
+                // If the user exited fullscreen but is still in grace period,
+                // Clear the timer so we don't enable fraud checks accidentally
+                clearTimeout(fullscreenGraceTimer);
+                fullscreenGraceTimer = null;
+            }
+        }
+    
         window.onload = function () {
-            let timeLimit = 10 * 60;
+            detectExitFullScreen();
             let display = document.getElementById('timer');
-            startTimer(timeLimit, display);
+            startTimer(10 * 60, display);
+    
+            // Add a click listener to each radio button to request fullscreen if not already
+            let options = document.querySelectorAll('.form-check-input');
+            options.forEach(option => {
+                option.addEventListener('click', function () {
+                    if (!fraudCheckEnabled && !examCompleted && !document.fullscreenElement) {
+                        enterFullScreen();
+                    }
+                });
+            });
         };
     </script>
-    
-    
-    
+        
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

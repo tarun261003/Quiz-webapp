@@ -3,9 +3,10 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-import random
+import random, time
+from django.utils.timezone import now
 from . import models
-from .models import ExamControl
+from .models import ExamControl, UserQuizProgress
 
 def user_login(request):
     """Handles user authentication and prevents fraud users from logging in."""
@@ -19,7 +20,6 @@ def user_login(request):
             return redirect('fraud')
 
         user = authenticate(username=uname, password=password)
-
         if user:
             login(request, user)
             return redirect('home')
@@ -69,25 +69,59 @@ def user_logout(request):
 @login_required
 def home(request):
     user = request.user
-
     exam_control = ExamControl.objects.first()
+
+    # Check if the exam has started
     if not exam_control or not exam_control.exam_started:
         return render(request, 'exam_not_started.html')
 
+    # If user already has a leaderboard entry, redirect to exam_completed
     if models.leaderboard.objects.filter(username=user.username).exists():
-        return redirect('examcompleted')  # Redirects to the animated page
+        return redirect('examcompleted')
 
-    questions = list(models.Question.objects.all())
-    random.shuffle(questions)
+    # Fetch or create UserQuizProgress for this user
+    quiz_progress, created = UserQuizProgress.objects.get_or_create(user=user)
+    if created:
+        # Set quiz duration to 15 minutes = 900 seconds
+        quiz_progress.quiz_duration = 900  # 15 minutes
+        quiz_progress.quiz_start_time = int(time.time())  # store the start as a UNIX timestamp
+        quiz_progress.save()
+    else:
+        # If quiz_progress already exists but has no start time, set it now
+        if quiz_progress.quiz_start_time is None:
+            quiz_progress.quiz_start_time = int(time.time())
+            quiz_progress.quiz_duration = 900  # 15 minutes
+            quiz_progress.save()
 
+    # Calculate elapsed and remaining time
+    elapsed_time = int(time.time()) - quiz_progress.quiz_start_time
+    remaining_time = max(quiz_progress.quiz_duration - elapsed_time, 0)
+
+    # Auto-submit if time has run out
+    if remaining_time <= 0:
+        return redirect('examcompleted')
+
+    # Shuffle questions if not already stored in session
+    if 'shuffled_questions' not in request.session:
+        questions = list(models.Question.objects.all())
+        random.shuffle(questions)
+        request.session['shuffled_questions'] = [q.id for q in questions]
+    else:
+        questions = list(models.Question.objects.filter(id__in=request.session['shuffled_questions']))
+
+    # Handle POST submission
     if request.method == 'POST':
-        score = sum(1 for i, question in enumerate(questions, start=1)
-                    if request.POST.get(f'question_{i}') == question.co)
+        # Calculate score
+        score = sum(
+            1 for question in questions
+            if request.POST.get(f'question_{question.qno}') == question.co
+        )
+        # Update or create leaderboard entry
+        models.leaderboard.objects.update_or_create(username=user.username, defaults={'score': score})
+        return redirect('examcompleted')
 
-        models.leaderboard.objects.create(username=user.username, score=score)
-        return redirect('examcompleted')  # Redirect after completion
-
-    return render(request, 'home.html', {'questions': questions})
+    # Pass remaining_time to template for timer
+    return render(request, 'home.html', {'questions': questions, 'remaining_time': remaining_time})
 
 
 @login_required
@@ -98,16 +132,13 @@ def exam_completed(request):
 
 @login_required
 def report_fraud(request):
-    """API to flag users who switch tabs during the exam."""
+    """API to flag users who switch tabs or resize window."""
     if request.method == "POST":
         uname = request.user.username
-        
         if not models.fraud_model.objects.filter(username=uname).exists():
             models.fraud_model.objects.create(username=uname, fraud=True)
             logout(request)
-
         return JsonResponse({"status": "fraud_detected"})
-
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
@@ -121,9 +152,7 @@ def leaderboard(request):
 def fraud(request):
     """Renders the fraud detection page and logs out the user."""
     uname = request.user.username
-
     if uname and not models.fraud_model.objects.filter(username=uname).exists():
         models.fraud_model.objects.create(username=uname, fraud=True)
         logout(request)
-
     return render(request, 'fraud.html')
